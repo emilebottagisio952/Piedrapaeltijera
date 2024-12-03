@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación de IndexedDB</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Verificación de IndexedDB</h1>
+    <div id="status"></div>
+
+    <script>
+        // Verificar si IndexedDB está disponible
+        if (!window.indexedDB) {
+            mostrarEstado('IndexedDB no está disponible en este navegador.', false);
+        } else {
+            // Intentar abrir la base de datos
+            const request = indexedDB.open('JuegoPPT', 1);
+
+            request.onerror = function(event) {
+                mostrarEstado('Error al abrir la base de datos: ' + event.target.error, false);
+            };
+
+            request.onsuccess = function(event) {
+                const db = event.target.result;
+                mostrarEstado('Conexión exitosa a la base de datos.', true);
+                
+                // Verificar el almacén de objetos
+                if (db.objectStoreNames.contains('partidas')) {
+                    mostrarEstado('El almacén "partidas" existe correctamente.', true);
+                } else {
+                    mostrarEstado('El almacén "partidas" no existe.', false);
+                }
+            };
+
+            request.onupgradeneeded = function(event) {
+                const db = event.target.result;
+                mostrarEstado('Actualizando estructura de la base de datos...', true);
+                
+                if (!db.objectStoreNames.contains('partidas')) {
+                    const objectStore = db.createObjectStore('partidas', { keyPath: 'id', autoIncrement: true });
+                    objectStore.createIndex('fecha', 'fecha', { unique: false });
+                    mostrarEstado('Almacén "partidas" creado correctamente.', true);
+                }
+            };
+        }
+
+        function mostrarEstado(mensaje, esExito) {
+            const statusDiv = document.getElementById('status');
+            const nuevoEstado = document.createElement('div');
+            nuevoEstado.className = 'status ' + (esExito ? 'success' : 'error');
+            nuevoEstado.textContent = mensaje;
+            statusDiv.appendChild(nuevoEstado);
+        }
+    </script>
+</body>
+</html>

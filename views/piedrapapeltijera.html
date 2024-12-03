@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piedra, Papel o Tijera</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        .opcion {
+            font-size: 24px;
+            margin: 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        #resultado {
+            font-size: 20px;
+            margin: 20px;
+            font-weight: bold;
+        }
+        #historial {
+            margin: 20px;
+            text-align: left;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Piedra, Papel o Tijera</h1>
+    
+    <div>
+        <button class="opcion" onclick="jugar('piedra')">🗿 Piedra</button>
+        <button class="opcion" onclick="jugar('papel')">📄 Papel</button>
+        <button class="opcion" onclick="jugar('tijera')">✂️ Tijera</button>
+    </div>
+    
+    <div id="resultado"></div>
+    <div id="historial">
+        <h2>Historial de Partidas</h2>
+        <ul id="lista-historial"></ul>
+    </div>
+
+    <script>
+        // Inicializar la base de datos
+        let db;
+        const request = indexedDB.open('JuegoPPT', 1);
+
+        request.onerror = function(event) {
+            console.error("Error al abrir DB:", event.target.error);
+        };
+
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            const objectStore = db.createObjectStore('partidas', { keyPath: 'id', autoIncrement: true });
+            objectStore.createIndex('fecha', 'fecha', { unique: false });
+        };
+
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            mostrarHistorial();
+        };
+
+        function guardarPartida(eleccionJugador, eleccionComputadora, resultado) {
+            const transaction = db.transaction(['partidas'], 'readwrite');
+            const objectStore = transaction.objectStore('partidas');
+            const partida = {
+                fecha: new Date(),
+                jugador: eleccionJugador,
+                computadora: eleccionComputadora,
+                resultado: resultado
+            };
+            objectStore.add(partida);
+            mostrarHistorial();
+        }
+
+        function mostrarHistorial() {
+            const lista = document.getElementById('lista-historial');
+            lista.innerHTML = '';
+            
+            const objectStore = db.transaction('partidas').objectStore('partidas');
+            objectStore.openCursor().onsuccess = function(event) {
+                const cursor = event.target.result;
+                if (cursor) {
+                    const li = document.createElement('li');
+                    li.textContent = `${cursor.value.fecha.toLocaleString()} - Jugador: ${cursor.value.jugador}, 
+                        Computadora: ${cursor.value.computadora}, Resultado: ${cursor.value.resultado}`;
+                    lista.appendChild(li);
+                    cursor.continue();
+                }
+            };
+        }
+
+        function jugar(eleccionJugador) {
+            const opciones = ['piedra', 'papel', 'tijera'];
+            const eleccionComputadora = opciones[Math.floor(Math.random() * 3)];
+            let resultado = '';
+
+            if (eleccionJugador === eleccionComputadora) {
+                resultado = '¡Empate!';
+            } 
+            else if (
+                (eleccionJugador === 'piedra' && eleccionComputadora === 'tijera') ||
+                (eleccionJugador === 'papel' && eleccionComputadora === 'piedra') ||
+                (eleccionJugador === 'tijera' && eleccionComputadora === 'papel')
+            ) {
+                resultado = '¡Ganaste!';
+            } 
+            else {
+                resultado = '¡Perdiste!';
+            }
+
+            document.getElementById('resultado').innerHTML = 
+                `Elegiste ${eleccionJugador}. La computadora eligió ${eleccionComputadora}. ${resultado}`;
+            
+            // Guardar la partida en la base de datos
+            guardarPartida(eleccionJugador, eleccionComputadora, resultado);
+        }
+    </script>
+</body>
+</html>

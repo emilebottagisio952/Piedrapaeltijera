@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base de Datos IndexedDB</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        button {
+            margin: 10px;
+            padding: 5px 10px;
+        }
+        #resultados {
+            margin-top: 20px;
+        }
+    </style>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+</head>
+<body>
+    <h1>Inicialización de Base de Datos IndexedDB</h1>
+
+    <button onclick="agregarPartida()">Agregar Partida</button>
+    <button onclick="mostrarPartidas()">Mostrar Partidas</button>
+    <div id="resultados"></div>
+    
+    <script>
+        // Inicializar la base de datos
+        let db;
+        const request = indexedDB.open('JuegoPPT', 1);
+
+        request.onerror = function(event) {
+            console.error("Error al abrir la base de datos:", event.target.error);
+            alert("Error al abrir la base de datos: " + event.target.error);
+        };
+
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            // Crear el almacén de objetos
+            const objectStore = db.createObjectStore('partidas', { keyPath: 'id', autoIncrement: true });
+            // Crear índice para el campo fecha
+            objectStore.createIndex('fecha', 'fecha', { unique: false });
+            console.log("Base de datos creada exitosamente");
+        };
+
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            console.log("Conexión a la base de datos establecida");
+            alert("Base de datos conectada exitosamente");
+        };
+
+        // Función para agregar una partida
+        function agregarPartida() {
+            if (!db) {
+                alert("La base de datos no está lista");
+                return;
+            }
+
+            const transaction = db.transaction(['partidas'], 'readwrite');
+            const objectStore = transaction.objectStore('partidas');
+            
+            const partida = {
+                fecha: new Date(),
+                jugador: "Jugador1",
+                resultado: "Victoria"
+            };
+
+            const request = objectStore.add(partida);
+            
+            request.onsuccess = function() {
+                alert("Partida agregada correctamente");
+                mostrarPartidas(); // Actualizar la lista automáticamente
+            };
+
+            request.onerror = function(event) {
+                alert("Error al agregar partida: " + event.target.error);
+            };
+        }
+
+        // Función para mostrar todas las partidas
+        function mostrarPartidas() {
+            if (!db) {
+                alert("La base de datos no está lista");
+                return;
+            }
+
+            const transaction = db.transaction(['partidas'], 'readonly');
+            const objectStore = transaction.objectStore('partidas');
+            const request = objectStore.getAll();
+
+            request.onsuccess = function() {
+                const partidas = request.result;
+                const resultadosDiv = document.getElementById('resultados');
+                resultadosDiv.innerHTML = '<h2>Partidas:</h2>' + 
+                    partidas.map(p => `<p>Fecha: ${p.fecha.toLocaleString()}, Jugador: ${p.jugador}, Resultado: ${p.resultado}</p>`).join('');
+            };
+
+            request.onerror = function(event) {
+                alert("Error al mostrar partidas: " + event.target.error);
+            };
+        }
+    </script>
+</body>
+</html>
